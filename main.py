@@ -266,9 +266,13 @@ function acceptConsent() {
     document.cookie = "consent_status=granted; path=/; max-age=31536000";
     document.getElementById('consent-banner').style.display = 'none';
 }
+function declineConsent() {
+    document.cookie = "consent_status=denied; path=/; max-age=31536000";
+    document.getElementById('consent-banner').style.display = 'none';
+}
 window.onload = function() {
-    var c = document.cookie.indexOf('consent_status=granted');
-    if (c !== -1) {
+    var cookies = document.cookie;
+    if (cookies.indexOf('consent_status=granted') !== -1 || cookies.indexOf('consent_status=denied') !== -1) {
         var b = document.getElementById('consent-banner');
         if (b) b.style.display = 'none';
     }
@@ -280,8 +284,11 @@ def consent_banner_html():
     return """
     <div class="consent-banner" id="consent-banner">
         <p>We use cookies to ensure GDPR compliance and improve your experience. 
-        By continuing, you consent to our cookie policy.</p>
-        <button class="consent-btn" onclick="acceptConsent()">Accept & Continue</button>
+        You have the right to accept or decline non-essential cookies.</p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="consent-btn" onclick="acceptConsent()">Accept</button>
+            <button class="consent-btn" style="background-color:transparent; color:#FAF7F2; border:1px solid #FAF7F2;" onclick="declineConsent()">Decline</button>
+        </div>
     </div>
     """
 
