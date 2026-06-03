@@ -512,9 +512,38 @@ async def product_page(slug: str, lang: str):
 
     return HTMLResponse(content=render_page(p['name'], body, lang, slug))
 
+
+@app.get("/robots.txt")
+async def robots():
+    return Response(content="""User-agent: *
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+Sitemap: https://shop.smyrnaandsable.com/sitemap.xml
+""", media_type="text/plain")
+
+@app.get("/sitemap.xml")
+async def sitemap():
+    urls = []
+    for slug in PRODUCT_ORDER:
+        for lang in ["en", "fr", "nl"]:
+            urls.append(f"https://shop.smyrnaandsable.com/product/{slug}/{lang}")
+    for lang in ["en", "fr", "nl"]:
+        urls.append(f"https://shop.smyrnaandsable.com/{lang}")
+    
+    xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    for url in urls:
+        xml += f'  <url><loc>{url}</loc></url>\n'
+    xml += '</urlset>'
+    return Response(content=xml, media_type="application/xml")
+
 @app.get("/health")
 async def health():
     visits = db.all()
     total = len(visits)
     blocked = len([v for v in visits if v.get("type") == "bot_blocked"])
     return {"status": "Sovereign Core Active", "total_traffic": total, "bots_blocked": blocked, "timestamp": datetime.datetime.now().isoformat()}
+    
