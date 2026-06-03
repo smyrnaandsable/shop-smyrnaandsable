@@ -1,3 +1,4 @@
+# v2.0 - robots.txt and sitemap added
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse
 from tinydb import TinyDB, Query
