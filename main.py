@@ -202,17 +202,37 @@ GTM_BODY = """        <!-- Google Tag Manager (noscript) -->
 
 CONSENT_SCRIPT = """
 <script>
+function sendSovereignSignal(consent) {
+    fetch("https://sovereign.smyrnaandsable.com/gtm/signal", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            consent: consent,
+            page: window.location.pathname,
+            event: "consent_decision",
+            scroll_depth: 0,
+            time_on_page: 0,
+            exit_point: document.referrer || "direct"
+        })
+    }).catch(function(e) { console.log("Sovereign signal:", e); });
+}
+
 function acceptConsent() {
     document.cookie = "consent_status=granted; path=/; max-age=31536000";
     document.getElementById('consent-banner').style.display = 'none';
+    sendSovereignSignal(true);
 }
+
 function declineConsent() {
     document.cookie = "consent_status=denied; path=/; max-age=31536000";
     document.getElementById('consent-banner').style.display = 'none';
+    sendSovereignSignal(false);
 }
+
 window.onload = function() {
     var cookies = document.cookie;
-    if (cookies.indexOf('consent_status=granted') !== -1 || cookies.indexOf('consent_status=denied') !== -1) {
+    if (cookies.indexOf('consent_status=granted') !== -1 || 
+        cookies.indexOf('consent_status=denied') !== -1) {
         var b = document.getElementById('consent-banner');
         if (b) b.style.display = 'none';
     }
@@ -546,4 +566,3 @@ async def health():
     total = len(visits)
     blocked = len([v for v in visits if v.get("type") == "bot_blocked"])
     return {"status": "Sovereign Core Active", "total_traffic": total, "bots_blocked": blocked, "timestamp": datetime.datetime.now().isoformat()}
-    
