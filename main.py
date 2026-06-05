@@ -220,6 +220,15 @@ function sendSovereignSignal(consent) {
 function acceptConsent() {
     document.cookie = "consent_status=granted; path=/; max-age=31536000";
     document.getElementById('consent-banner').style.display = 'none';
+    
+    // GTM dataLayer'a consent_granted event'i gönder
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+        'event': 'consent_granted',
+        'analytics_storage': 'granted',
+        'ad_storage': 'granted'
+    });
+    
     sendSovereignSignal(true);
 }
 
