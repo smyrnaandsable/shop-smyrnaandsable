@@ -492,16 +492,33 @@ async def sitemap():
 
 @app.middleware("http")
 async def sovereign_protection(request: Request, call_next):
-    user_agent = request.headers.get("user-agent", "").lower()
-    if "python-requests" in user_agent or "scrapy" in user_agent:
-        db.insert({"type": "bot_blocked", "path": str(request.url.path), "timestamp": datetime.datetime.now().isoformat()})
-        return Response(content="Access Denied", status_code=403)
-    consent_status = request.cookies.get("consent_status", "denied")
-    db.insert({"type": "visit", "path": str(request.url.path), "consent": consent_status, "timestamp": datetime.datetime.now().isoformat()})
-    response = await call_next(request)
-    response.headers["X-Consent-Status"] = consent_status
-    response.headers["X-Protected-By"] = "Sovereign Core"
-    return response
+   user_agent = request.headers.get("user-agent", "").lower()
+   
+   # Bot kontrolü — UptimeRobot izin ver
+   is_bad_bot = (
+       "python-requests" in user_agent 
+       or "scrapy" in user_agent
+   ) and "uptimerobot" not in user_agent
+   
+   if is_bad_bot:
+       db.insert({
+           "type": "bot_blocked",
+           "path": str(request.url.path),
+           "timestamp": datetime.datetime.now().isoformat()
+       })
+       return Response(content="Access Denied", status_code=403)
+   
+   consent_status = request.cookies.get("consent_status", "denied")
+   db.insert({
+       "type": "visit",
+       "path": str(request.url.path),
+       "consent": consent_status,
+       "timestamp": datetime.datetime.now().isoformat()
+   })
+   response = await call_next(request)
+   response.headers["X-Consent-Status"] = consent_status
+   response.headers["X-Protected-By"] = "Sovereign Core"
+   return response
 
 @app.get("/")
 async def root():
