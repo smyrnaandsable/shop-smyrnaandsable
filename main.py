@@ -463,8 +463,10 @@ def render_page(title, body, lang="en", slug=None):
 </html>"""
 
 
-@app.get("/robots.txt")
-async def robots():
+@app.api_route("/robots.txt", methods=["GET", "HEAD"])
+async def robots(request: Request):
+    if request.method == "HEAD":
+        return Response(status_code=200)
     return Response(content="""User-agent: *
 Allow: /
 
@@ -474,8 +476,10 @@ Allow: /
 Sitemap: https://shop.smyrnaandsable.com/sitemap.xml
 """, media_type="text/plain")
 
-@app.get("/sitemap.xml")
-async def sitemap():
+@app.api_route("/sitemap.xml", methods=["GET", "HEAD"])
+async def sitemap(request: Request):
+    if request.method == "HEAD":
+        return Response(status_code=200)
     urls = []
     for slug in PRODUCT_ORDER:
         for lang in ["en", "fr", "nl"]:
@@ -492,43 +496,47 @@ async def sitemap():
 
 @app.middleware("http")
 async def sovereign_protection(request: Request, call_next):
-   user_agent = request.headers.get("user-agent", "").lower()
-   
-   # Bot kontrolü — UptimeRobot izin ver
-   is_bad_bot = (
-       "python-requests" in user_agent 
-       or "scrapy" in user_agent
-   ) and "uptimerobot" not in user_agent
-   
-   if is_bad_bot:
-       db.insert({
-           "type": "bot_blocked",
-           "path": str(request.url.path),
-           "timestamp": datetime.datetime.now().isoformat()
-       })
-       return Response(content="Access Denied", status_code=403)
-   
-   consent_status = request.cookies.get("consent_status", "denied")
-   db.insert({
-       "type": "visit",
-       "path": str(request.url.path),
-       "consent": consent_status,
-       "timestamp": datetime.datetime.now().isoformat()
-   })
-   response = await call_next(request)
-   response.headers["X-Consent-Status"] = consent_status
-   response.headers["X-Protected-By"] = "Sovereign Core"
-   return response
+    user_agent = request.headers.get("user-agent", "").lower()
 
-@app.get("/")
-async def root():
+    # Bot kontrolü — UptimeRobot izin ver
+    is_bad_bot = (
+        "python-requests" in user_agent
+        or "scrapy" in user_agent
+    ) and "uptimerobot" not in user_agent
+
+    if is_bad_bot:
+        db.insert({
+            "type": "bot_blocked",
+            "path": str(request.url.path),
+            "timestamp": datetime.datetime.now().isoformat()
+        })
+        return Response(content="Access Denied", status_code=403)
+
+    consent_status = request.cookies.get("consent_status", "denied")
+    db.insert({
+        "type": "visit",
+        "path": str(request.url.path),
+        "consent": consent_status,
+        "timestamp": datetime.datetime.now().isoformat()
+    })
+    response = await call_next(request)
+    response.headers["X-Consent-Status"] = consent_status
+    response.headers["X-Protected-By"] = "Sovereign Core"
+    return response
+
+@app.api_route("/", methods=["GET", "HEAD"])
+async def root(request: Request):
+    if request.method == "HEAD":
+        return Response(status_code=200)
     return await home("en")
 
-@app.get("/{lang}")
-async def home(lang: str):
+@app.api_route("/{lang}", methods=["GET", "HEAD"])
+async def home(lang: str, request: Request = None):
+    if request and request.method == "HEAD":
+        return Response(status_code=200)
     if lang not in ["en", "fr", "nl"]:
         return HTMLResponse(content="Not found", status_code=404)
-    
+
     cards = ""
     for i, slug in enumerate(PRODUCT_ORDER):
         p = PRODUCTS[slug][lang]
@@ -551,12 +559,14 @@ async def home(lang: str):
 
     return HTMLResponse(content=render_page(COLLECTION_TITLE[lang], body, lang))
 
-@app.get("/product/{slug}/{lang}")
-async def product_page(slug: str, lang: str):
+@app.api_route("/product/{slug}/{lang}", methods=["GET", "HEAD"])
+async def product_page(slug: str, lang: str, request: Request = None):
+    if request and request.method == "HEAD":
+        return Response(status_code=200)
     lang = get_lang(lang)
     if slug not in PRODUCTS:
         return HTMLResponse(content="Not found", status_code=404)
-    
+
     p = PRODUCTS[slug][lang]
     contact_p, contact_btn = CONTACT_TEXT[lang]
 
@@ -577,8 +587,10 @@ async def product_page(slug: str, lang: str):
 
     return HTMLResponse(content=render_page(p['name'], body, lang, slug))
 
-@app.get("/health")
-async def health():
+@app.api_route("/health", methods=["GET", "HEAD"])
+async def health(request: Request = None):
+    if request and request.method == "HEAD":
+        return Response(status_code=200)
     visits = db.all()
     total = len(visits)
     blocked = len([v for v in visits if v.get("type") == "bot_blocked"])
