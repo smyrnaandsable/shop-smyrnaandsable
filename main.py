@@ -234,7 +234,7 @@ function declineConsent() {
     document.getElementById('consent-banner').style.display = 'none';
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
-        'event': 'consent_denied',
+        'event': 'consent_decline',
         'analytics_storage': 'denied',
         'ad_storage': 'denied'
     });
